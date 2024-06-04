@@ -1,0 +1,95 @@
+1. Quantos clientes o restaurante tem desde a abertura?
+
+SELECT COUNT(*) FROM tb_cliente;
+
+2. Quantas vezes estes clientes estiveram no restaurante?
+
+SELECT COUNT(*) FROM tb_mesa;
+
+3. Quantas vezes estes clientes estiveram no restaurante acompanhados?
+
+SELECT COUNT(*) FROM tb_mesa WHERE num_pessoa_mesa > 1;
+
+4. Qual o período do ano em que o restaurante tem maior movimento?
+
+SELECT MONTH(data_hora_entrada) AS mes, COUNT(*) AS num_visitas
+FROM tb_mesa
+GROUP BY mes
+ORDER BY num_visitas DESC;
+
+
+5. Quantas mesas estão em dupla no Dia dos Namorados?
+
+SELECT COUNT(*), YEAR(data_hora_entrada)
+FROM tb_mesa
+WHERE num_pessoa_mesa = 2 
+  AND DAY(data_hora_entrada) = 12 
+  AND MONTH(data_hora_entrada) = 06
+GROUP BY YEAR(data_hora_entrada)
+ORDER BY YEAR(data_hora_entrada);
+
+6. Qual(is) o(s) cliente(s) que trouxe(ram) mais pessoas por ano?
+
+-- Passo 1: Descobrir os anos distintos
+SELECT DISTINCT YEAR(data_hora_entrada) AS ano
+FROM tb_mesa;
+
+-- Passo 2: Consultar os clientes que trouxeram mais pessoas por ano específico
+SELECT YEAR(ms.data_hora_entrada) AS ano, cl.nome_cliente AS cliente, SUM(ms.num_pessoa_mesa) AS qtd_pessoas
+FROM tb_mesa ms
+LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+WHERE YEAR(ms.data_hora_entrada) = 2022  -- Modificar para cada ano distinto
+GROUP BY ano, cliente
+ORDER BY qtd_pessoas DESC
+LIMIT 10;
+
+-- Passo 3: União dos resultados por ano
+SELECT * 
+FROM (
+    SELECT YEAR(ms.data_hora_entrada) AS ano, cl.nome_cliente AS cliente, SUM(ms.num_pessoa_mesa) AS qtd_pessoas 
+    FROM tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE YEAR(ms.data_hora_entrada) = 2022
+    GROUP BY ano, cliente
+    ORDER BY qtd_pessoas DESC
+    LIMIT 10
+    UNION
+    SELECT YEAR(ms.data_hora_entrada) AS ano, cl.nome_cliente AS cliente, SUM(ms.num_pessoa_mesa) AS qtd_pessoas 
+    FROM tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE YEAR(ms.data_hora_entrada) = 2023
+    GROUP BY ano, cliente
+    ORDER BY qtd_pessoas DESC
+    LIMIT 10
+    UNION
+    SELECT YEAR(ms.data_hora_entrada) AS ano, cl.nome_cliente AS cliente, SUM(ms.num_pessoa_mesa) AS qtd_pessoas 
+    FROM tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE YEAR(ms.data_hora_entrada) = 2024
+    GROUP BY ano, cliente
+    ORDER BY qtd_pessoas DESC
+    LIMIT 10
+) AS tb_top10_major_consumer_per_year;
+
+
+7. Qual o cliente que mais fez pedidos por ano?
+
+SELECT YEAR(ms.data_hora_entrada) AS ano, cl.nome_cliente AS cliente, COUNT(pd.codigo_pedido) AS num_pedidos
+FROM tb_pedido pd
+LEFT JOIN tb_mesa ms ON pd.codigo_mesa = ms.codigo_mesa
+LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+GROUP BY ano, cliente
+ORDER BY num_pedidos DESC
+LIMIT 10;
+
+
+8. Qual o cliente que mais gastou em todos os anos?8. Qual o cliente que mais gastou em todos os anos?
+
+SELECT cl.nome_cliente AS cliente, SUM(pd.quantidade * p.preco_unitario_prato) AS total_gasto
+FROM tb_pedido pd
+LEFT JOIN tb_prato p ON pd.codigo_prato = p.codigo_prato
+LEFT JOIN tb_mesa ms ON pd.codigo_mesa = ms.codigo_mesa
+LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+GROUP BY cliente
+ORDER BY total_gasto DESC
+LIMIT 10;
